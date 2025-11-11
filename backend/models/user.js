@@ -1,67 +1,64 @@
-const conn = require('../config/db');
-const User = {};
+const db = require('../config/db');
 
-User.getAllUsers = () => {
-    return conn.query('SELECT * FROM User')
-        .then(([rows, fields]) => rows)
-        .catch((err) => {
-            console.error('Error fetching all users:', err);
-            throw err;
-        });
+const User = {
+  async getAllUsers() {
+    const [rows] = await db.query('SELECT * FROM "User"');
+    return rows; // array
+  },
+
+  async getUserById(id) {
+    const [rows] = await db.query(
+      'SELECT * FROM "User" WHERE user_id = $1',
+      [id]
+    );
+    return rows; // array ([]) if not found
+  },
+
+  async createUser({
+    username, password, email, name, surname,
+    country, role = null, dietary_goals = null,
+    registration_date = null, amount_achievements = 0,
+    profile_picture = null
+  }) {
+    const [rows] = await db.query(
+      'INSERT INTO "User" ("username","password","email","name","surname","country","role",' +
+      ' "dietary_goals","registration_date","amount_achievements","profile_picture") ' +
+      'VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ' +
+      'RETURNING user_id',
+      [
+        username, password, email, name, surname,
+        country, role, dietary_goals, registration_date,
+        amount_achievements, profile_picture
+      ]
+    );
+    return rows[0].user_id; // new id
+  },
+
+  async authUser(username) {
+    const [rows] = await db.query(
+      'SELECT * FROM "User" WHERE "username" = $1 LIMIT 1',
+      [username]
+    );
+    return rows; // array ([]) if not found
+  },
+
+  async updateUser(id, {
+    username, name, surname, email, password,
+    dietary_goals, country, profile_picture
+  }) {
+    await db.query(
+      'UPDATE "User" SET "username" = $1, "name" = $2, "surname" = $3, "email" = $4, ' +
+      '"password" = $5, "dietary_goals" = $6, "country" = $7, "profile_picture" = $8 ' +
+      'WHERE user_id = $9',
+      [username, name, surname, email, password, dietary_goals, country, profile_picture, id]
+    );
+    return true;
+  },
+
+  async deleteUser(id) {
+    await db.query('DELETE FROM "User" WHERE user_id = $1', [id]);
+    return true;
+  }
 };
-
-User.getUserById = (id) => {
-    return conn.query('SELECT * FROM User WHERE user_id = ?', [id])
-        .then(([rows, fields]) => rows)
-        .catch((err) => {
-            console.error(`Error fetching user with ID ${id}:`, err);
-            throw err;
-        });
-};
-
-User.createUser = (userData) => {
-    const { username, password, email, name, surname, country, role, dietary_goals, registration_date, amount_achievements } = userData;
-    return conn.query(
-        'INSERT INTO User (username, password, email, name, surname, country, role, dietary_goals, registration_date, amount_achievements) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [username, password, email, name, surname, country, role, dietary_goals, registration_date, amount_achievements]
-    )
-        .then(([result]) => result)
-        .catch((err) => {
-            console.error('Error creating user:', err);
-            throw err;
-        });
-};
-
-User.authUser = (username) => {
-    return conn.query('SELECT * FROM User WHERE username = ?', [username])
-        .then(([rows, fields]) => rows)
-        .catch((err) => {
-            console.error(`Error authenticating user ${username}:`, err);
-            throw err;
-        });
-};
-
-User.updateUser = (id, userData) => {
-    const { username, name, surname, email, password, dietary_goals, country, profile_picture } = userData;
-    return conn.query(
-        'UPDATE User SET username = ?, name = ?, surname = ?, email = ?, password = ?, dietary_goals = ?, country = ?, profile_picture = ? WHERE user_id = ?',
-        [username, name, surname, email, password, dietary_goals, country, profile_picture, id]
-    )
-    .then(([result]) => result)
-    .catch((err) => {
-        console.error(`Error updating user with ID ${id}:`, err);
-        throw err;
-    });
-};
-
-User.deleteUser = (id) => {
-    return conn.query('DELETE FROM User WHERE user_id = ?', [id])
-        .then(([result]) => result)
-        .catch((err) => {
-            console.error(`Error deleting user with ID ${id}:`, err);
-            throw err;
-        });
-};
-
 
 module.exports = User;

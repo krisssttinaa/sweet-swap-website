@@ -10,7 +10,7 @@ const Home = () => {
   useEffect(() => {
     const fetchNewRecipes = async () => {
       try {
-        const response = await axios.get('http://88.200.63.148:8288/api/recipes/newest');
+        const response = await axios.get('http://localhost:8288/api/recipes/newest');
         setNewRecipes(response.data);
       } catch (error) {
         console.error('Error fetching recipes:', error);
@@ -81,7 +81,7 @@ const Home = () => {
               <div className="recipe-card" key={recipe.recipe_id}>
                 {recipe.image_filename && (
                   <img
-                    src={`http://88.200.63.148:8288/uploads/${recipe.image_filename}`}
+                    src={`http://localhost:8288/uploads/${recipe.image_filename}`}
                     alt={recipe.title}
                   />
                 )}

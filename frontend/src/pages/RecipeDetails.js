@@ -21,13 +21,13 @@ const RecipeDetails = () => {
 
     const fetchComments = useCallback(async () => {
         try {
-            const commentsResponse = await axios.get(`http://88.200.63.148:8288/api/comments/recipe/${id}`, {
+            const commentsResponse = await axios.get(`http://localhost:8288/api/comments/recipe/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (commentsResponse.data && Array.isArray(commentsResponse.data)) {
                 const commentsWithPictures = await Promise.all(
                     commentsResponse.data.map(async (comment) => {
-                        const userResponse = await axios.get(`http://88.200.63.148:8288/api/users/${comment.user_id}`);
+                        const userResponse = await axios.get(`http://localhost:8288/api/users/${comment.user_id}`);
                         return {
                             ...comment,
                             profile_picture: userResponse.data.profile_picture || 'default.png',
@@ -44,17 +44,17 @@ const RecipeDetails = () => {
     useEffect(() => {
         const fetchRecipe = async () => {
             try {
-                const response = await axios.get(`http://88.200.63.148:8288/api/recipes/${id}`);
+                const response = await axios.get(`http://localhost:8288/api/recipes/${id}`);
                 setRecipe(response.data);
 
                 if (response.data.user_id) {
-                    const userResponse = await axios.get(`http://88.200.63.148:8288/api/users/${response.data.user_id}`);
+                    const userResponse = await axios.get(`http://localhost:8288/api/users/${response.data.user_id}`);
                     setUsername(userResponse.data.username);
                     setUserProfilePicture(userResponse.data.profile_picture || 'default.png'); // Set author's profile picture
                 }
 
                 if (token) {
-                    const savedResponse = await axios.get(`http://88.200.63.148:8288/api/saved/saved`, {
+                    const savedResponse = await axios.get(`http://localhost:8288/api/saved/saved`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const savedRecipes = savedResponse.data;
@@ -80,7 +80,7 @@ const RecipeDetails = () => {
         }
 
         try {
-            await axios.post(`http://88.200.63.148:8288/api/comments`, {
+            await axios.post(`http://localhost:8288/api/comments`, {
                 recipe_id: id,
                 user_id: userId,
                 content: newComment
@@ -106,7 +106,7 @@ const RecipeDetails = () => {
         }
 
         try {
-            await axios.put(`http://88.200.63.148:8288/api/comments/${editingCommentId}`, 
+            await axios.put(`http://localhost:8288/api/comments/${editingCommentId}`, 
             { content: editContent }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -121,7 +121,7 @@ const RecipeDetails = () => {
 
     const handleDeleteComment = async (comment_id) => {
         try {
-            await axios.delete(`http://88.200.63.148:8288/api/comments/${comment_id}`, {
+            await axios.delete(`http://localhost:8288/api/comments/${comment_id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             fetchComments();  // Refetch comments after delete
@@ -158,7 +158,7 @@ const RecipeDetails = () => {
 
     const handleDelete = async () => {
         try {
-            await axios.delete(`http://88.200.63.148:8288/api/recipes/${recipe.recipe_id}`, {
+            await axios.delete(`http://localhost:8288/api/recipes/${recipe.recipe_id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             navigate('/recipes');
@@ -169,7 +169,7 @@ const RecipeDetails = () => {
 
     const handleSave = async () => {
         try {
-            await axios.post('http://88.200.63.148:8288/api/saved/save', { recipeId: recipe.recipe_id }, {
+            await axios.post('http://localhost:8288/api/saved/save', { recipeId: recipe.recipe_id }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setIsSaved(true);
@@ -180,7 +180,7 @@ const RecipeDetails = () => {
 
     const handleUnsave = async () => {
         try {
-            await axios.delete('http://88.200.63.148:8288/api/saved/unsave', {
+            await axios.delete('http://localhost:8288/api/saved/unsave', {
                 data: { recipeId: recipe.recipe_id },
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -205,11 +205,11 @@ const RecipeDetails = () => {
 
     return (
         <div className="recipe-details">
-            <img className='recipe-img' src={`http://88.200.63.148:8288/uploads/${recipe.image_filename}`} alt={recipe.title} />
+            <img className='recipe-img' src={`http://localhost:8288/uploads/${recipe.image_filename}`} alt={recipe.title} />
             <div className="recipe-info">
                 <h2>{recipe.title}</h2>
                 <p className="author">
-                    <img src={`http://88.200.63.148:8288/uploads/${userProfilePicture}`} alt="Profile" className="profile-picture" />
+                    <img src={`http://localhost:8288/uploads/${userProfilePicture}`} alt="Profile" className="profile-picture" />
                     <span onClick={() => handleUsernameClick(recipe.user_id)} className="username">{username}</span>
                 </p>
                 {recipe.products && recipe.products.length > 0 && (
@@ -237,7 +237,7 @@ const RecipeDetails = () => {
                   {comments.length > 0 ? (
                       comments.map((comment, index) => (
                           <div key={comment.comment_id || index} className="comment">
-                              <img src={`http://88.200.63.148:8288/uploads/${comment.profile_picture}`} alt={comment.username} className="profile-picture" />
+                              <img src={`http://localhost:8288/uploads/${comment.profile_picture}`} alt={comment.username} className="profile-picture" />
                               {editingCommentId === comment.comment_id ? (
                                   <div>
                                       <textarea

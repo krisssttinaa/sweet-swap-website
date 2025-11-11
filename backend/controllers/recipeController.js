@@ -1,10 +1,11 @@
 const Recipe = require('../models/recipe');
-const fs = require('fs');
 const db = require('../config/db');
+const fs = require('fs');
 
 exports.createRecipe = async (req, res) => {
-  const { user_id, title, instructions, category, date_created = new Date() } = req.body;
-  const imageFilename = req.file ? req.file.filename : null;
+  const { user_id, title, instructions, category } = req.body;
+  const date_created = new Date();
+  const image_filename = req.file ? req.file.filename : null;
 
   if (!user_id || !title || !instructions) {
     return res.status(400).json({ error: 'Required fields missing' });
@@ -12,83 +13,73 @@ exports.createRecipe = async (req, res) => {
 
   try {
     const recipeId = await Recipe.createRecipe({
-      user_id,
-      title,
-      instructions,
-      category,
-      date_created,
-      image_filename: imageFilename 
+      title, instructions, user_id, category, date_created, image_filename
     });
     res.status(201).json({ message: 'Recipe created', recipeId });
   } catch (err) {
-    console.error(err);
+    console.error('createRecipe error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
-exports.getAllRecipes = async (req, res) => {
+exports.getAllRecipes = async (_req, res) => {
   try {
-    const recipes = await Recipe.getAllRecipes();
-    res.json(recipes);
+    const rows = await Recipe.getAllRecipes();
+    res.json(rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error' });  
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.getRecipeById = async (req, res) => {
   const { id } = req.params;
-
   try {
-    const [recipe] = await db.query('SELECT * FROM Recipe WHERE recipe_id = ?', [id]);
-    if (!recipe.length) {
-      return res.status(404).json({ message: 'Recipe not found' });
-    }
+    const [recipe] = await db.query('SELECT * FROM "Recipe" WHERE recipe_id = $1', [id]);
+    if (!recipe.length) return res.status(404).json({ message: 'Recipe not found' });
 
-    const [products] = await db.query(`
-      SELECT Product.*, RecipeProduct.quantity 
-      FROM RecipeProduct 
-      JOIN Product ON RecipeProduct.product_id = Product.product_id 
-      WHERE RecipeProduct.recipe_id = ?`, [id]);
+    const [products] = await db.query(
+      'SELECT p.*, rp.quantity ' +
+      'FROM "RecipeProduct" rp ' +
+      'JOIN "Product" p ON rp.product_id = p.product_id ' +
+      'WHERE rp.recipe_id = $1',
+      [id]
+    );
 
     recipe[0].products = products;
     res.json(recipe[0]);
   } catch (err) {
-    console.error(err.message);
+    console.error('getRecipeById error:', err);
     res.status(500).send('Server error');
   }
 };
 
 exports.deleteRecipe = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    await Recipe.deleteRecipe(id);
+    await Recipe.deleteRecipe(req.params.id);
     res.json({ message: 'Recipe deleted' });
   } catch (err) {
-    console.error(err.message);
+    console.error(err);
     res.status(500).send('Server error');
   }
 };
 
-exports.getNewestRecipes = async (req, res) => {
+exports.getNewestRecipes = async (_req, res) => {
   try {
-    const recipes = await Recipe.getLatestRecipes();
-    res.json(recipes);
-  } catch (error) {
-    console.error('Error fetching newest recipes:', error);
+    const rows = await Recipe.getLatestRecipes();
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching newest recipes:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.getRecipesByCategory = async (req, res) => {
-  const { category } = req.params;
-
   try {
-    const [recipes] = await db.query('SELECT * FROM Recipe WHERE category = ?', [category]);
-    res.json(recipes);
+    const [rows] = await db.query('SELECT * FROM "Recipe" WHERE category = $1', [req.params.category]);
+    res.json(rows);
   } catch (err) {
-    console.error(err.message);
+    console.error(err);
     res.status(500).send('Server error');
   }
 };
@@ -96,30 +87,21 @@ exports.getRecipesByCategory = async (req, res) => {
 exports.updateRecipe = async (req, res) => {
   const { id } = req.params;
   const { title, instructions, category } = req.body;
-  const imageFilename = req.file ? req.file.filename : null; // Get the new image file, if uploaded
+  const image_filename = req.file ? req.file.filename : null;
 
   try {
-    const [recipe] = await db.query('SELECT * FROM Recipe WHERE recipe_id = ?', [id]);
-
-    if (!recipe.length) {
-      return res.status(404).json({ message: 'Recipe not found' });
-    }
-
-    const updatedRecipe = {
-      title,
-      instructions,
-      category,
-      image_filename: imageFilename || recipe[0].image_filename, // Use the new image or keep the old one
-    };
+    const [recipe] = await db.query('SELECT * FROM "Recipe" WHERE recipe_id = $1', [id]);
+    if (!recipe.length) return res.status(404).json({ message: 'Recipe not found' });
 
     await db.query(
-      'UPDATE Recipe SET title = ?, instructions = ?, category = ?, image_filename = ? WHERE recipe_id = ?',
-      [updatedRecipe.title, updatedRecipe.instructions, updatedRecipe.category, updatedRecipe.image_filename, id]
+      'UPDATE "Recipe" SET title = $1, instructions = $2, category = $3, image_filename = $4 WHERE recipe_id = $5',
+      [title || recipe[0].title, instructions || recipe[0].instructions, category || recipe[0].category,
+       image_filename || recipe[0].image_filename, id]
     );
 
     res.json({ message: 'Recipe updated successfully' });
   } catch (err) {
-    console.error('Error updating recipe:', err.message);
+    console.error('Error updating recipe:', err);
     res.status(500).send('Server error');
   }
 };

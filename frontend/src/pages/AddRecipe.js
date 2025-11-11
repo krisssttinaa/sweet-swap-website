@@ -26,7 +26,7 @@ const AddRecipe = () => {
     formData.append('user_id', userId); 
   
     try {
-      await axios.post('http://88.200.63.148:8288/api/recipes/create', formData, {
+      await axios.post('http://localhost:8288/api/recipes/create', formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
       navigate('/recipes');  

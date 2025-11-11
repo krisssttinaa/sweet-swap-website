@@ -4,48 +4,61 @@ import axios from 'axios';
 import './Profile.css';
 
 const Profile = () => {
-  const { id } = useParams(); 
+  const { id } = useParams(); // optional :id in route
+  const navigate = useNavigate();
+
   const [user, setUser] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedPicture, setSelectedPicture] = useState('default.png');
   const [isPictureModalOpen, setIsPictureModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',  
+    username: '',
     name: '',
     surname: '',
     email: '',
-    password: '', 
+    password: '',
     dietaryGoals: '',
   });
-  const navigate = useNavigate();
-  const loggedInUserId = localStorage.getItem('user_id');
+
+  const loggedInUserId = localStorage.getItem('user_id') || null;
+  const token = localStorage.getItem('token');
+
+  // True if: (a) /profile (no :id) OR (b) :id equals logged-in user id
+  const isCurrentUser =
+    !id || (user && String(user.user_id) === String(loggedInUserId));
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const token = localStorage.getItem('token');
-      
       if (!token) {
         navigate('/login');
         return;
       }
 
       try {
-        const userIdToFetch = id || loggedInUserId; 
-        const response = await axios.get(`http://88.200.63.148:8288/api/users/${userIdToFetch}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(response.data);
-        setSelectedPicture(response.data.profile_picture || 'default.png');
+        const userIdToFetch = id || loggedInUserId;
+        if (!userIdToFetch) {
+          navigate('/login');
+          return;
+        }
 
+        const { data } = await axios.get(
+          `http://localhost:8288/api/users/${userIdToFetch}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setUser(data);
+        setSelectedPicture(data.profile_picture || 'default.png');
+
+        // When viewing own profile, prefill form
         if (!id) {
           setFormData({
-            username: response.data.username,  
-            name: response.data.name,
-            surname: response.data.surname,
-            email: response.data.email,
-            password: '********', 
-            dietaryGoals: response.data.dietary_goals || '',
+            username: data.username,
+            name: data.name,
+            surname: data.surname,
+            email: data.email,
+            password: '********',
+            dietaryGoals: data.dietary_goals || '',
           });
         }
       } catch (error) {
@@ -55,49 +68,41 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [id, loggedInUserId, navigate]);
+  }, [id, loggedInUserId, token, navigate]);
 
   useEffect(() => {
     const fetchRecipes = async () => {
-      if (user) {
-        try {
-          const response = await axios.get('http://88.200.63.148:8288/api/recipes');
-          setRecipes(response.data.filter((recipe) => recipe.user_id === user.user_id));
-        } catch (error) {
-          console.error('Error fetching recipes:', error);
-        }
+      if (!user) return;
+      try {
+        const { data } = await axios.get('http://localhost:8288/api/recipes');
+        setRecipes(data.filter((r) => String(r.user_id) === String(user.user_id)));
+      } catch (error) {
+        console.error('Error fetching recipes:', error);
       }
     };
-
     fetchRecipes();
   }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePictureSelect = (picture) => {
-    setSelectedPicture(picture);
-  };
+  const handlePictureSelect = (picture) => setSelectedPicture(picture);
 
   const handleEditClick = () => {
+    if (!isCurrentUser) return;
     setIsEditing(true);
   };
 
   const handleSaveClick = async () => {
-    const token = localStorage.getItem('token');
-  
-    const updateData = {  
-      username: formData.username, 
+    const updateData = {
+      username: formData.username,
       name: formData.name,
       surname: formData.surname,
       email: formData.email,
       dietaryGoals: formData.dietaryGoals,
-      profilePicture: selectedPicture,  
+      profilePicture: selectedPicture,
     };
 
     if (formData.password && formData.password !== '********') {
@@ -105,17 +110,17 @@ const Profile = () => {
     }
 
     try {
-      await axios.put('http://88.200.63.148:8288/api/users/profile', updateData, {  
+      await axios.put('http://localhost:8288/api/users/profile', updateData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setUser({
-        ...user,
+      setUser((prev) => ({
+        ...prev,
         ...updateData,
         dietary_goals: updateData.dietaryGoals,
         profile_picture: updateData.profilePicture,
-        password: user.password,  
-      });
+        password: prev.password,
+      }));
 
       setIsEditing(false);
     } catch (error) {
@@ -137,14 +142,10 @@ const Profile = () => {
   };
 
   const handleDeleteClick = async () => {
-    const token = localStorage.getItem('token');
-    
     try {
-      await axios.delete(`http://88.200.63.148:8288/api/users/profile`, {
+      await axios.delete('http://localhost:8288/api/users/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
-      // Clear user data and navigate to login
       localStorage.clear();
       navigate('/login');
     } catch (error) {
@@ -152,53 +153,29 @@ const Profile = () => {
     }
   };
 
-  const openPictureModal = () => {
-    setIsPictureModalOpen(true);
-  };
+  const openPictureModal = () => setIsPictureModalOpen(true);
+  const closePictureModal = () => setIsPictureModalOpen(false);
 
-  const closePictureModal = () => {
-    setIsPictureModalOpen(false);
-  };
-
-  if (!user) {
-    return <div>Loading...</div>;
-  }
-
-  const isCurrentUser = user.user_id === parseInt(loggedInUserId);
+  if (!user) return <div>Loading...</div>;
 
   return (
     <div className="profile-page">
       <h2>{isCurrentUser ? 'Profile' : `${user.username}'s Profile`}</h2>
+
       {isCurrentUser && isEditing ? (
         <div className="edit-form">
           <label>Username:</label>
-          <input
-            type="text"
-            name="username"
-            value={formData.username}
-            onChange={handleInputChange}
-          />
+          <input name="username" value={formData.username} onChange={handleInputChange} />
+
           <label>Name:</label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-          />
+          <input name="name" value={formData.name} onChange={handleInputChange} />
+
           <label>Surname:</label>
-          <input
-            type="text"
-            name="surname"
-            value={formData.surname}
-            onChange={handleInputChange}
-          />
+          <input name="surname" value={formData.surname} onChange={handleInputChange} />
+
           <label>Email:</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
-          />
+          <input type="email" name="email" value={formData.email} onChange={handleInputChange} />
+
           <label>Password:</label>
           <input
             type="password"
@@ -207,6 +184,7 @@ const Profile = () => {
             onChange={handleInputChange}
             placeholder="Enter new password or leave blank"
           />
+
           <label>Dietary Goals:</label>
           <textarea
             name="dietaryGoals"
@@ -216,37 +194,38 @@ const Profile = () => {
             placeholder="Enter your dietary goals"
             className="textarea-dietary-goals"
           />
-          
+
           <label>Select Profile Picture:</label>
-          <img 
-            src={`http://88.200.63.148:8288/uploads/${selectedPicture}`} 
+          <img
+            src={`http://localhost:8288/uploads/${selectedPicture}`}
             alt="Profile"
             className="profile-picture"
             onClick={openPictureModal}
           />
 
           <div className="button-group">
-          <div className="button-grouppp">
-            <button className="save" onClick={handleSaveClick}>Save</button>
-            <button className="cancel" onClick={handleCancelClick}>Cancel</button>
+            <div className="button-grouppp">
+              <button className="save" onClick={handleSaveClick}>Save</button>
+              <button className="cancel" onClick={handleCancelClick}>Cancel</button>
             </div>
-            <button className="delete" onClick={handleDeleteClick}>Delete Account</button> {/* New delete button */}
-            
+            <button className="delete" onClick={handleDeleteClick}>Delete Account</button>
           </div>
         </div>
       ) : (
         <div className="profile-info">
-          <img 
-            src={`http://88.200.63.148:8288/uploads/${user.profile_picture || 'default.png'}`} 
+          <img
+            src={`http://localhost:8288/uploads/${user.profile_picture || 'default.png'}`}
             alt="Profile"
             className="profile-pic"
           />
-          <p><strong>Username:</strong> {user.username}</p> 
+          <p><strong>Username:</strong> {user.username}</p>
           <p><strong>Name:</strong> {user.name}</p>
           <p><strong>Surname:</strong> {user.surname}</p>
           <p><strong>Email:</strong> {user.email}</p>
           <p><strong>Dietary Goals:</strong> {user.dietary_goals || 'Not specified'}</p>
-          {!id && <button className="edit" onClick={handleEditClick}>Edit</button>}
+          {isCurrentUser && (
+            <button className="edit" onClick={handleEditClick}>Edit</button>
+          )}
         </div>
       )}
 
@@ -263,14 +242,14 @@ const Profile = () => {
             >
               {recipe.image_filename && (
                 <img
-                  src={`http://88.200.63.148:8288/uploads/${recipe.image_filename}`}
+                  src={`http://localhost:8288/uploads/${recipe.image_filename}`}
                   alt={recipe.title}
                   className="recipe-image"
                 />
               )}
               <div className="recipe-content">
                 <h4>{recipe.title}</h4>
-                <p>{recipe.instructions.substring(0, 100)}...</p>
+                <p>{(recipe.instructions || '').substring(0, 100)}...</p>
               </div>
             </div>
           ))
@@ -280,19 +259,22 @@ const Profile = () => {
       {isPictureModalOpen && (
         <div className="picture-modal">
           <div className="picture-grid">
-            {['default.png', 'profile0.png', 'profile1.png', 'profile2.png', 'profile3.png', 'profile4.png', 'profile5.png', 'profile6.png', 
-            'profile7.png', 'profile8.png', 'profile9.png', 'profile10.png', 'profile11.png', 'profile12.png', 'profile13.png', 'profile14.png'].map((pic) => (
-              <img 
-                key={pic} 
-                src={`http://88.200.63.148:8288/uploads/${pic}`} 
-                alt="Profile Option" 
+            {[
+              'default.png','profile0.png','profile1.png','profile2.png','profile3.png',
+              'profile4.png','profile5.png','profile6.png','profile7.png','profile8.png',
+              'profile9.png','profile10.png','profile11.png','profile12.png','profile13.png','profile14.png'
+            ].map((pic) => (
+              <img
+                key={pic}
+                src={`http://localhost:8288/uploads/${pic}`}
+                alt="Profile Option"
                 className={`picture-option ${selectedPicture === pic ? 'selected' : ''}`}
                 onClick={() => handlePictureSelect(pic)}
               />
             ))}
           </div>
           <div className="modal-actions">
-            <button onClick={closePictureModal} className='close'>Close</button>
+            <button onClick={closePictureModal} className="close">Close</button>
             <button onClick={closePictureModal} className="save">Save Selection</button>
           </div>
         </div>

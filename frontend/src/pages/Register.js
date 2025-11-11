@@ -16,7 +16,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://88.200.63.148:8288/api/users/register', {
+      const response = await axios.post('http://localhost:8288/api/users/register', {
         username,
         name,
         surname,

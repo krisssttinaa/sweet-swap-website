@@ -6,38 +6,34 @@ import './Login.css';
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // State for show password
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     try {
-      const response = await axios.post('http://88.200.63.148:8288/api/users/login', {
+      const { data } = await axios.post('http://localhost:8288/api/users/login', {
         username,
         password
       });
-      //console.log('API response:', response.data); 
-  
-      const { token, user } = response.data;
-      //console.log('Token:', token); 
-      //console.log('User:', user); 
-  
-      if (token && user) {
+
+      const { token, user } = data || {};
+      if (token && user && user.id != null) {
         localStorage.setItem('token', token);
-        localStorage.setItem('user_id', user.id);
+        localStorage.setItem('user_id', String(user.id));   // <-- important
         localStorage.setItem('username', user.username);
-        navigate('/');
+        navigate('/profile');                                // <-- go to “my profile”
       } else {
         setError('Invalid credentials');
-        console.error('No token or user data found. Please log in again.');
       }
-    } catch (error) {
-      console.error('Login error', error);
+    } catch (err) {
+      console.error('Login error', err);
       setError('Invalid credentials');
     }
   };
-  
+
   return (
     <div className="login-container">
       <div className="login-card">
@@ -46,40 +42,22 @@ const Login = () => {
           {error && <p className="error-message">{error}</p>}
           <div className="form-group">
             <label htmlFor="username">Username:</label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
+            <input id="username" value={username}
+              onChange={(e) => setUsername(e.target.value)} required />
           </div>
           <div className="form-group">
             <label htmlFor="password">Password:</label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <input id="password" type={showPassword ? 'text' : 'password'}
+              value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
           <div className="form-group show-password">
-            <input
-              type="checkbox"
-              id="showPassword"
-              checked={showPassword}
-              onChange={() => setShowPassword(!showPassword)}
-            />
+            <input id="showPassword" type="checkbox"
+              checked={showPassword} onChange={() => setShowPassword(!showPassword)} />
             <label htmlFor="showPassword">Show password</label>
           </div>
           <button type="submit" className="login-button">Login</button>
         </form>
-        <button 
-          type="button" 
-          className="register-link" 
-          onClick={() => navigate('/register')}
-        >
+        <button type="button" className="register-link" onClick={() => navigate('/register')}>
           or Register
         </button>
       </div>

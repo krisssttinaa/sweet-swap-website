@@ -27,7 +27,7 @@ const RecipeList = () => {
     try {
       let response;
       if (selectedTab === 'saved') {
-        response = await axios.get('http://88.200.63.148:8288/api/saved/saved', {
+        response = await axios.get('http://localhost:8288/api/saved/saved', {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (currentCategory !== 'all') {
@@ -40,7 +40,7 @@ const RecipeList = () => {
           console.error('No user ID found. Cannot fetch user-specific recipes.');
           return;
         }
-        response = await axios.get('http://88.200.63.148:8288/api/recipes', {
+        response = await axios.get('http://localhost:8288/api/recipes', {
           headers: { Authorization: `Bearer ${token}` }
         });
         response = {
@@ -48,9 +48,9 @@ const RecipeList = () => {
         };
       } else {
         if (currentCategory === 'all') {
-          response = await axios.get('http://88.200.63.148:8288/api/recipes');
+          response = await axios.get('http://localhost:8288/api/recipes');
         } else {
-          response = await axios.get(`http://88.200.63.148:8288/api/recipes/category/${currentCategory}`);
+          response = await axios.get(`http://localhost:8288/api/recipes/category/${currentCategory}`);
         }
       }
 

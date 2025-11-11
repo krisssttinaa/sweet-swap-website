@@ -15,7 +15,7 @@ const SearchResults = () => {
 
       if (query) {
         try {
-          const response = await axios.get(`http://88.200.63.148:8288/api/recipes/search?query=${query}`);
+          const response = await axios.get(`http://localhost:8288/api/recipes/search?query=${query}`);
           setResults(response.data);
         } catch (error) {
           console.error('Error fetching search results:', error);

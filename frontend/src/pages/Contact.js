@@ -18,7 +18,7 @@ const Contact = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://88.200.63.148:8288/api/contact', formData);
+      await axios.post('http://localhost:8288/api/contact', formData);
       alert('Message sent successfully');
       setFormData({ name: '', email: '', message: '' });
     } catch (err) {

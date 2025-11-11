@@ -1,57 +1,29 @@
-const conn = require('../config/db');
-const Product = {};
+const db = require('../config/db');
 
-Product.getAllProducts = () => {
-    return new Promise((resolve, reject) => {
-        conn.query('SELECT * FROM Product', (err, res) => {
-            if (err) {
-                console.error('Error fetching all products:', err);
-                return reject(err);
-            }
-            return resolve(res);
-        });
-    });
-};
+const Product = {
+  async getAllProducts() {
+    const [rows] = await db.query('SELECT * FROM "Product"');
+    return rows;
+  },
 
-Product.getProductById = (id) => {
-    return new Promise((resolve, reject) => {
-        conn.query('SELECT * FROM Product WHERE product_id = ?', [id], (err, res) => {
-            if (err) {
-                console.error(`Error fetching product with ID ${id}:`, err);
-                return reject(err);
-            }
-            return resolve(res);
-        });
-    });
-};
+  async getProductById(id) {
+    const [rows] = await db.query('SELECT * FROM "Product" WHERE product_id = $1', [id]);
+    return rows; // array
+  },
 
-Product.createProduct = (productData) => {
-    const { product_name, description, price } = productData;
-    return new Promise((resolve, reject) => {
-        conn.query(
-            'INSERT INTO Product (product_name, description, price) VALUES (?, ?, ?)',
-            [product_name, description, price],
-            (err, res) => {
-                if (err) {
-                    console.error('Error creating product:', err);
-                    return reject(err);
-                }
-                return resolve(res);
-            }
-        );
-    });
-};
+  async createProduct({ name, description, price, brand, shop }) {
+    const [rows] = await db.query(
+      'INSERT INTO "Product" ("name", description, price, brand, shop) ' +
+      'VALUES ($1, $2, $3, $4, $5) RETURNING product_id',
+      [name, description, price, brand, shop]
+    );
+    return rows[0].product_id;
+  },
 
-Product.deleteProduct = (id) => {
-    return new Promise((resolve, reject) => {
-        conn.query('DELETE FROM Product WHERE product_id = ?', [id], (err, res) => {
-            if (err) {
-                console.error(`Error deleting product with ID ${id}:`, err);
-                return reject(err);
-            }
-            return resolve(res);
-        });
-    });
+  async deleteProduct(id) {
+    await db.query('DELETE FROM "Product" WHERE product_id = $1', [id]);
+    return true;
+  }
 };
 
 module.exports = Product;

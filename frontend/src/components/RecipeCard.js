@@ -12,7 +12,7 @@ const RecipeCard = ({ recipe, fetchRecipes }) => {
   useEffect(() => {
     const checkIfSaved = async () => {
       try {
-        const savedResponse = await axios.get(`http://88.200.63.148:8288/api/saved/saved`, {
+        const savedResponse = await axios.get(`http://localhost:8288/api/saved/saved`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         const savedRecipes = savedResponse.data;
@@ -37,7 +37,7 @@ const RecipeCard = ({ recipe, fetchRecipes }) => {
   const handleDelete = async () => {
     const token = localStorage.getItem('token');
     try {
-      await axios.delete(`http://88.200.63.148:8288/api/recipes/${recipe.recipe_id}`, {
+      await axios.delete(`http://localhost:8288/api/recipes/${recipe.recipe_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchRecipes();
@@ -49,7 +49,7 @@ const RecipeCard = ({ recipe, fetchRecipes }) => {
   const handleSave = async () => {
     try {
       await axios.post(
-        'http://88.200.63.148:8288/api/saved/save',
+        'http://localhost:8288/api/saved/save',
         { recipeId: recipe.recipe_id },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -64,7 +64,7 @@ const RecipeCard = ({ recipe, fetchRecipes }) => {
 
   const handleUnsave = async () => {
     try {
-      await axios.delete('http://88.200.63.148:8288/api/saved/unsave', {
+      await axios.delete('http://localhost:8288/api/saved/unsave', {
         data: { recipeId: recipe.recipe_id },
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
@@ -88,7 +88,7 @@ const RecipeCard = ({ recipe, fetchRecipes }) => {
     <div className="recipe-card" onClick={handleViewRecipe}>
       {recipe.image_filename && (
         <img
-          src={`http://88.200.63.148:8288/uploads/${recipe.image_filename}`}
+          src={`http://localhost:8288/uploads/${recipe.image_filename}`}
           alt={recipe.title}
           className="recipe-image"
         />

@@ -14,7 +14,7 @@ const EditRecipe = () => {
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
-        const response = await axios.get(`http://88.200.63.148:8288/api/recipes/${id}`);
+        const response = await axios.get(`http://localhost:8288/api/recipes/${id}`);
         const recipe = response.data;
         setTitle(recipe.title);
         setInstructions(recipe.instructions);
@@ -38,7 +38,7 @@ const EditRecipe = () => {
     if (image) formData.append('image', image); // Ensure this is correct
   
     try {
-      await axios.put(`http://88.200.63.148:8288/api/recipes/${id}`, formData, {
+      await axios.put(`http://localhost:8288/api/recipes/${id}`, formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
       navigate(`/recipe/${id}`);

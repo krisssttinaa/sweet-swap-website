@@ -1,57 +1,29 @@
-const conn = require('../config/db');
-const Achievement = {};
+const db = require('../config/db');
 
-Achievement.getAllAchievements = () => {
-    return new Promise((resolve, reject) => {
-        conn.query('SELECT * FROM Achievement', (err, res) => {
-            if (err) {
-                console.error('Error fetching all achievements:', err);
-                return reject(err);
-            }
-            return resolve(res);
-        });
-    });
-};
+const Achievement = {
+  async getAllAchievements() {
+    const [rows] = await db.query('SELECT * FROM "Achievement"');
+    return rows;
+  },
 
-Achievement.getAchievementById = (id) => {
-    return new Promise((resolve, reject) => {
-        conn.query('SELECT * FROM Achievement WHERE achievement_id = ?', [id], (err, res) => {
-            if (err) {
-                console.error(`Error fetching achievement with ID ${id}:`, err);
-                return reject(err);
-            }
-            return resolve(res);
-        });
-    });
-};
+  async getAchievementById(id) {
+    const [rows] = await db.query('SELECT * FROM "Achievement" WHERE achievement_id = $1', [id]);
+    return rows; // array
+  },
 
-Achievement.createAchievement = (achievementData) => {
-    const { user_id, achievement_name, description, date_achieved } = achievementData;
-    return new Promise((resolve, reject) => {
-        conn.query(
-            'INSERT INTO Achievement (user_id, achievement_name, description, date_achieved) VALUES (?, ?, ?, ?)',
-            [user_id, achievement_name, description, date_achieved],
-            (err, res) => {
-                if (err) {
-                    console.error('Error creating achievement:', err);
-                    return reject(err);
-                }
-                return resolve(res);
-            }
-        );
-    });
-};
+  async createAchievement({ user_id, title, description, date_achieved }) {
+    const [rows] = await db.query(
+      'INSERT INTO "Achievement" (user_id, title, description, date_achieved) ' +
+      'VALUES ($1, $2, $3, $4) RETURNING achievement_id',
+      [user_id, title, description, date_achieved]
+    );
+    return rows[0].achievement_id;
+  },
 
-Achievement.deleteAchievement = (id) => {
-    return new Promise((resolve, reject) => {
-        conn.query('DELETE FROM Achievement WHERE achievement_id = ?', [id], (err, res) => {
-            if (err) {
-                console.error(`Error deleting achievement with ID ${id}:`, err);
-                return reject(err);
-            }
-            return resolve(res);
-        });
-    });
+  async deleteAchievement(id) {
+    await db.query('DELETE FROM "Achievement" WHERE achievement_id = $1', [id]);
+    return true;
+  }
 };
 
 module.exports = Achievement;

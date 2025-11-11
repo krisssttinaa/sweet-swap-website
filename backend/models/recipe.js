@@ -1,66 +1,42 @@
-const conn = require('../config/db');
-const Recipe = {};
+const db = require('../config/db');
 
-Recipe.getAllRecipes = () => {
-    return conn.query('SELECT * FROM Recipe')
-        .then(([rows, fields]) => rows)
-        .catch((err) => {
-            console.error('Error fetching all recipes:', err);
-            throw err;
-        });
-};
+const Recipe = {
+  async getAllRecipes() {
+    const [rows] = await db.query('SELECT * FROM "Recipe"');
+    return rows;
+  },
 
-Recipe.getRecipeById = (id) => {
-    return conn.query('SELECT * FROM Recipe WHERE recipe_id = ?', [id])
-        .then(([rows, fields]) => rows)
-        .catch((err) => {
-            console.error(`Error fetching recipe with ID ${id}:`, err);
-            throw err;
-        });
-};
+  async getRecipeById(id) {
+    const [rows] = await db.query('SELECT * FROM "Recipe" WHERE recipe_id = $1', [id]);
+    return rows; // array
+  },
 
-Recipe.createRecipe = (recipeData) => {
-    const { title, instructions, user_id, category, date_created, image_filename } = recipeData;
-    return conn.query(
-      'INSERT INTO Recipe (title, instructions, user_id, category, date_created, image_filename) VALUES (?, ?, ?, ?, ?, ?)',
+  async createRecipe({ title, instructions, user_id, category, date_created, image_filename }) {
+    const [rows] = await db.query(
+      'INSERT INTO "Recipe" (title, instructions, user_id, category, date_created, image_filename) ' +
+      'VALUES ($1, $2, $3, $4, $5, $6) RETURNING recipe_id',
       [title, instructions, user_id, category, date_created, image_filename]
-    )
-      .then(([result]) => result)
-      .catch((err) => {
-        console.error('Error creating recipe:', err);
-        throw err;
-      });
-};
+    );
+    return rows[0].recipe_id;
+  },
 
-Recipe.updateRecipe = (id, updatedRecipeData) => {
-    const { title, instructions, category, image_filename } = updatedRecipeData;
-    return conn.query(
-        'UPDATE Recipe SET title = ?, instructions = ?, category = ?, image_filename = ? WHERE recipe_id = ?',
-        [title, instructions, category, image_filename, id]
-    )
-    .then(([result]) => result)
-    .catch((err) => {
-        console.error(`Error updating recipe with ID ${id}:`, err);
-        throw err;
-    });
-};
+  async updateRecipe(id, { title, instructions, category, image_filename }) {
+    await db.query(
+      'UPDATE "Recipe" SET title = $1, instructions = $2, category = $3, image_filename = $4 WHERE recipe_id = $5',
+      [title, instructions, category, image_filename, id]
+    );
+    return true;
+  },
 
-Recipe.deleteRecipe = (id) => {
-    return conn.query('DELETE FROM Recipe WHERE recipe_id = ?', [id])
-        .then(([result]) => result)
-        .catch((err) => {
-            console.error(`Error deleting recipe with ID ${id}:`, err);
-            throw err;
-        });
-};
+  async deleteRecipe(id) {
+    await db.query('DELETE FROM "Recipe" WHERE recipe_id = $1', [id]);
+    return true;
+  },
 
-Recipe.getLatestRecipes = () => {
-    return conn.query('SELECT * FROM Recipe ORDER BY date_created DESC LIMIT 3')
-      .then(([rows, fields]) => rows)
-      .catch((err) => {
-        console.error('Error fetching latest recipes:', err);
-        throw err;
-      });
+  async getLatestRecipes() {
+    const [rows] = await db.query('SELECT * FROM "Recipe" ORDER BY date_created DESC LIMIT 3');
+    return rows;
+  }
 };
 
 module.exports = Recipe;
