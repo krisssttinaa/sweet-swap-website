@@ -12,22 +12,13 @@ Sweet Swap is a web application that allows users to create, share, and discover
 - **Backend:**
   - Node.js
   - Express.js
-  - MySQL2 for database management
+  - CockroachDB
   - bcryptjs for password hashing
   - cors for handling Cross-Origin Resource Sharing
   - multer for file uploads
   - (nodemailer for sending emails)
-
-- **Database:**
-  - MySQL
-
-- **Deployment:**
-  - Forever for keeping the Node.js server running
-  - Static files served from an Express backend
-
-## Getting Started
-
-### Prerequisites
+    
+## Prerequisites
 
 Ensure you have the following installed on your system:
 
