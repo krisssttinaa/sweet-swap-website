@@ -25,3 +25,6 @@ Ensure you have the following installed on your system:
 - Node.js (v16.x.x or later)
 - npm (v8.x.x or later)
 - MySQL
+
+You can view the related Overleaf project here:  
+👉 [Open in Overleaf](https://www.overleaf.com/read/gbywskxfhdwk#68425a)
