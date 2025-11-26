@@ -1,89 +1,73 @@
 const User = require('../models/user');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 exports.register = async (req, res) => {
   const { username, email, password, name, surname, country } = req.body;
 
   try {
-    const existing = await User.authUser(username);      // [] or [row]
-    if (existing.length > 0) {
-      return res.status(400).json({ msg: 'User already exists' });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    await User.createUser({
+    const result = await User.registerAndGenerateToken({
       username,
-      password: hashedPassword,
       email,
+      password,
       name,
       surname,
-      country,
-      role: null,                       // role can be NULL now
-      dietary_goals: null,
-      registration_date: new Date(),
-      amount_achievements: 0,
-      profile_picture: null
+      country
     });
 
-    const newUser = await User.authUser(username);       // expect [row]
-    if (newUser.length === 0) {
+    if (!result.success) {
+      if (result.error === 'USER_EXISTS') {
+        return res.status(400).json({ msg: 'User already exists' });
+      }
+      console.error('Register error (model-level):', result.error);
       return res.status(500).json({ msg: 'User creation failed' });
     }
 
-    const payload = { user: { id: newUser[0].user_id, username: newUser[0].username } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' }, (err, token) => {
-      if (err) throw err;
-      res.json({ token });
-    });
+    // Only send what you need, here the token (and you could also send result.user if you want)
+    return res.json({ token: result.token });
   } catch (err) {
-    console.error('Register error:', err);
+    console.error('Register error (controller-level):', err);
     res.status(500).send('Server error');
   }
 };
 
 exports.login = async (req, res) => {
   const { username, password } = req.body;
+
   try {
-    const user = await User.authUser(username);
-    if (user.length === 0) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
+    const result = await User.loginAndGenerateToken({ username, password });
+
+    if (!result.success) {
+      if (result.error === 'INVALID_CREDENTIALS') {
+        return res.status(400).json({ msg: 'Invalid Credentials' });
+      }
+      console.error('Login error (model-level):', result.error);
+      return res.status(500).json({ msg: 'Login failed' });
     }
 
-    const isMatch = await bcrypt.compare(password, user[0].password);
-    if (!isMatch) {
-      return res.status(400).json({ msg: 'Invalid Credentials' });
-    }
-
-    const payload = { user: { id: user[0].user_id, username: user[0].username } };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' }, (err, token) => {
-      if (err) throw err;
-      res.json({
-        token,
-        user: {
-          id: user[0].user_id,
-          username: user[0].username,
-          email: user[0].email,
-          name: user[0].name,
-          surname: user[0].surname
-        }
-      });
+    return res.json({
+      token: result.token,
+      user: result.user
     });
   } catch (err) {
-    console.error('Login error:', err);
+    console.error('Login error (controller-level):', err);
     res.status(500).send('Server error');
   }
 };
 
 exports.profile = async (req, res) => {
   try {
-    const rows = await User.getUserById(req.user.id);
-    if (rows.length === 0) return res.status(404).json({ msg: 'User not found' });
-    res.json(rows[0]);
+    const result = await User.getProfile(req.user.id);
+
+    if (!result.success) {
+      if (result.error === 'NOT_FOUND') {
+        return res.status(404).json({ msg: 'User not found' });
+      }
+      console.error('Profile error (model-level):', result.error);
+      return res.status(500).json({ msg: 'Could not fetch profile' });
+    }
+
+    return res.json(result.user);
   } catch (err) {
-    console.error('Profile error:', err);
+    console.error('Profile error (controller-level):', err);
     res.status(500).send('Server error');
   }
 };
@@ -101,7 +85,9 @@ exports.getAllUsers = async (_req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const rows = await User.getUserById(req.params.id);
-    if (rows.length === 0) return res.status(404).json({ msg: 'User not found' });
+    if (rows.length === 0) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
     res.json(rows[0]);
   } catch (err) {
     console.error('GetUserById error:', err);
@@ -110,49 +96,78 @@ exports.getUserById = async (req, res) => {
 };
 
 exports.updateProfile = async (req, res) => {
-  console.log('UpdateProfile request body:');
   const { username, name, surname, email, password, dietaryGoals, country, profilePicture } = req.body;
   const userId = req.user.id;
 
   try {
-    const rows = await User.getUserById(userId);
-    if (rows.length === 0) return res.status(404).json({ msg: 'User not found' });
+    const result = await User.updateProfileWithBusinessLogic(userId, {
+      username,
+      name,
+      surname,
+      email,
+      password,
+      dietaryGoals,
+      country,
+      profilePicture
+    });
 
-    const base = rows[0];
-    const updated = {
-      username: username || base.username,
-      name: name || base.name,
-      surname: surname || base.surname,
-      email: email || base.email,
-      dietary_goals: dietaryGoals || base.dietary_goals,
-      country: country || base.country,
-      profile_picture: profilePicture || base.profile_picture
-    };
-
-    if (password && password !== '********') {
-      const salt = await bcrypt.genSalt(10);
-      updated.password = await bcrypt.hash(password, salt);
-    } else {
-      updated.password = base.password;
+    if (!result.success) {
+      if (result.error === 'NOT_FOUND') {
+        return res.status(404).json({ msg: 'User not found' });
+      }
+      console.error('UpdateProfile error (model-level):', result.error);
+      return res.status(500).json({ msg: 'Could not update profile' });
     }
 
-    await User.updateUser(userId, updated);
     res.json({ msg: 'Profile updated successfully' });
   } catch (err) {
-    console.error('UpdateProfile error:', err);
+    console.error('UpdateProfile error (controller-level):', err);
     res.status(500).send('Server error');
   }
 };
 
 exports.deleteProfile = async (req, res) => {
-  try {
-    const rows = await User.getUserById(req.user.id);
-    if (rows.length === 0) return res.status(404).json({ msg: 'User not found' });
+  const userId = req.user.id;
 
-    await User.deleteUser(req.user.id);
+  try {
+    const result = await User.deleteUserIfExists(userId);
+
+    if (!result.success) {
+      if (result.error === 'NOT_FOUND') {
+        return res.status(404).json({ msg: 'User not found' });
+      }
+      console.error('DeleteProfile error (model-level):', result.error);
+      return res.status(500).json({ msg: 'Could not delete user' });
+    }
+
     res.status(200).json({ msg: 'User deleted successfully' });
   } catch (err) {
-    console.error('DeleteProfile error:', err);
+    console.error('DeleteProfile error (controller-level):', err);
     res.status(500).send('Server error');
+  }
+};
+
+exports.updateProfilePicture = async (req, res) => {
+  const userId = req.user.id;
+  const { profilePicture } = req.body;
+
+  try {
+    const result = await User.updateProfilePictureWithValidation(userId, profilePicture);
+
+    if (!result.success) {
+      if (result.error === 'INVALID_PICTURE') {
+        return res.status(400).json({ error: 'Invalid profile picture selected' });
+      }
+      if (result.error === 'NOT_FOUND') {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      console.error('updateProfilePicture model error:', result.error);
+      return res.status(500).json({ error: 'Could not update profile picture' });
+    }
+
+    res.status(200).json({ message: 'Profile picture updated successfully' });
+  } catch (error) {
+    console.error('updateProfilePicture controller error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };

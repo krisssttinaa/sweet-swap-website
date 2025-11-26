@@ -1,31 +1,25 @@
-const nodemailer = require('nodemailer');
+const Contact = require('../models/contact');
 
 exports.sendContactForm = async (req, res) => {
   const { name, email, message } = req.body;
 
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    const result = await Contact.sendContactMessage({ name, email, message });
 
-    const info = await transporter.sendMail({
-      from: email,
-      to: process.env.EMAIL,
-      subject: 'Contact Form Submission',
-      text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
-    });
-
-    if (!info || !info.messageId) {
-      return res.status(500).json({ error: 'Failed to send message' });
+    if (!result.success) {
+      if (result.error === 'INVALID_INPUT') {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      if (result.error === 'SEND_FAILED') {
+        return res.status(500).json({ error: 'Failed to send message' });
+      }
+      console.error('sendContactForm model error:', result.error);
+      return res.status(500).json({ error: 'Server error' });
     }
 
     return res.status(200).json({ message: 'Message sent successfully' });
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('sendContactForm controller error:', error);
     return res.status(500).json({ error: 'Server error' });
   }
 };

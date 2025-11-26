@@ -1,23 +1,29 @@
 const Recipe = require('../models/recipe');
-const db = require('../config/db');
-const fs = require('fs');
 
 exports.createRecipe = async (req, res) => {
   const { user_id, title, instructions, category } = req.body;
-  const date_created = new Date();
   const image_filename = req.file ? req.file.filename : null;
 
-  if (!user_id || !title || !instructions) {
-    return res.status(400).json({ error: 'Required fields missing' });
-  }
-
   try {
-    const recipeId = await Recipe.createRecipe({
-      title, instructions, user_id, category, date_created, image_filename
+    const result = await Recipe.createRecipeWithDefaults({
+      user_id,
+      title,
+      instructions,
+      category,
+      image_filename
     });
-    res.status(201).json({ message: 'Recipe created', recipeId });
+
+    if (!result.success) {
+      if (result.error === 'MISSING_REQUIRED_FIELDS') {
+        return res.status(400).json({ error: 'Required fields missing' });
+      }
+      console.error('createRecipe model error:', result.error);
+      return res.status(500).json({ error: 'Could not create recipe' });
+    }
+
+    res.status(201).json({ message: 'Recipe created', recipeId: result.recipeId });
   } catch (err) {
-    console.error('createRecipe error:', err);
+    console.error('createRecipe controller error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -27,39 +33,49 @@ exports.getAllRecipes = async (_req, res) => {
     const rows = await Recipe.getAllRecipes();
     res.json(rows);
   } catch (err) {
-    console.error(err);
+    console.error('getAllRecipes controller error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.getRecipeById = async (req, res) => {
   const { id } = req.params;
+
   try {
-    const [recipe] = await db.query('SELECT * FROM "Recipe" WHERE recipe_id = $1', [id]);
-    if (!recipe.length) return res.status(404).json({ message: 'Recipe not found' });
+    const result = await Recipe.getRecipeWithProducts(id);
 
-    const [products] = await db.query(
-      'SELECT p.*, rp.quantity ' +
-      'FROM "RecipeProduct" rp ' +
-      'JOIN "Product" p ON rp.product_id = p.product_id ' +
-      'WHERE rp.recipe_id = $1',
-      [id]
-    );
+    if (!result.success) {
+      if (result.error === 'NOT_FOUND') {
+        return res.status(404).json({ message: 'Recipe not found' });
+      }
+      console.error('getRecipeById model error:', result.error);
+      return res.status(500).json({ message: 'Could not fetch recipe' });
+    }
 
-    recipe[0].products = products;
-    res.json(recipe[0]);
+    res.json(result.recipe);
   } catch (err) {
-    console.error('getRecipeById error:', err);
+    console.error('getRecipeById controller error:', err);
     res.status(500).send('Server error');
   }
 };
 
 exports.deleteRecipe = async (req, res) => {
+  const { id } = req.params;
+
   try {
-    await Recipe.deleteRecipe(req.params.id);
+    const result = await Recipe.deleteRecipeIfExists(id);
+
+    if (!result.success) {
+      if (result.error === 'NOT_FOUND') {
+        return res.status(404).json({ message: 'Recipe not found' });
+      }
+      console.error('deleteRecipe model error:', result.error);
+      return res.status(500).json({ message: 'Could not delete recipe' });
+    }
+
     res.json({ message: 'Recipe deleted' });
   } catch (err) {
-    console.error(err);
+    console.error('deleteRecipe controller error:', err);
     res.status(500).send('Server error');
   }
 };
@@ -69,17 +85,19 @@ exports.getNewestRecipes = async (_req, res) => {
     const rows = await Recipe.getLatestRecipes();
     res.json(rows);
   } catch (err) {
-    console.error('Error fetching newest recipes:', err);
+    console.error('getNewestRecipes controller error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.getRecipesByCategory = async (req, res) => {
+  const { category } = req.params;
+
   try {
-    const [rows] = await db.query('SELECT * FROM "Recipe" WHERE category = $1', [req.params.category]);
+    const rows = await Recipe.getRecipesByCategory(category);
     res.json(rows);
   } catch (err) {
-    console.error(err);
+    console.error('getRecipesByCategory controller error:', err);
     res.status(500).send('Server error');
   }
 };
@@ -90,18 +108,45 @@ exports.updateRecipe = async (req, res) => {
   const image_filename = req.file ? req.file.filename : null;
 
   try {
-    const [recipe] = await db.query('SELECT * FROM "Recipe" WHERE recipe_id = $1', [id]);
-    if (!recipe.length) return res.status(404).json({ message: 'Recipe not found' });
+    const result = await Recipe.updateRecipeWithMerge(id, {
+      title,
+      instructions,
+      category,
+      image_filename
+    });
 
-    await db.query(
-      'UPDATE "Recipe" SET title = $1, instructions = $2, category = $3, image_filename = $4 WHERE recipe_id = $5',
-      [title || recipe[0].title, instructions || recipe[0].instructions, category || recipe[0].category,
-       image_filename || recipe[0].image_filename, id]
-    );
+    if (!result.success) {
+      if (result.error === 'NOT_FOUND') {
+        return res.status(404).json({ message: 'Recipe not found' });
+      }
+      console.error('updateRecipe model error:', result.error);
+      return res.status(500).json({ message: 'Could not update recipe' });
+    }
 
     res.json({ message: 'Recipe updated successfully' });
   } catch (err) {
-    console.error('Error updating recipe:', err);
+    console.error('updateRecipe controller error:', err);
     res.status(500).send('Server error');
+  }
+};
+
+exports.searchRecipes = async (req, res) => {
+  const { query } = req.query;
+
+  if (!query) {
+    return res.status(400).json({ error: 'Query parameter is required' });
+  }
+
+  try {
+    const rows = await Recipe.searchRecipes(query);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No recipes found matching your query' });
+    }
+
+    res.json(rows);
+  } catch (err) {
+    console.error('searchRecipes controller error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
