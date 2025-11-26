@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Contact.css';
 import axios from 'axios';
+import { API_BASE_URL } from '../Configuration';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -18,7 +19,7 @@ const Contact = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:8288/api/contact', formData);
+      await axios.post(`${API_BASE_URL}/contact`, formData);
       alert('Message sent successfully');
       setFormData({ name: '', email: '', message: '' });
     } catch (err) {
@@ -31,7 +32,10 @@ const Contact = () => {
     <div className="contact-container">
       <div className="contact-details">
         <h2>Contact us</h2>
-        <p>If you have any questions about our recipes or even suggestions, don't hesitate to contact us. We are looking forward to hearing from you!</p>
+        <p>
+          If you have any questions about our recipes or even suggestions, don't hesitate to
+          contact us. We are looking forward to hearing from you!
+        </p>
         <p>E-mail: support@gmail.com</p>
       </div>
       <div className="contact-card">
@@ -47,9 +51,11 @@ const Contact = () => {
           </div>
           <div className="form-group">
             <label htmlFor="message">Message:</label>
-            <textarea id="message" name="message" value={message} onChange={onChange} required></textarea>
+            <textarea id="message" name="message" value={message} onChange={onChange} required />
           </div>
-          <button type="submit" className="contact-button">Send Message</button>
+          <button type="submit" className="contact-button">
+            Send Message
+          </button>
         </form>
       </div>
     </div>

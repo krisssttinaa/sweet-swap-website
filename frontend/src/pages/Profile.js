@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Profile.css';
+import { API_BASE_URL, FILE_BASE_URL } from '../Configuration';
 
 const Profile = () => {
   const { id } = useParams(); // optional :id in route
@@ -24,7 +25,6 @@ const Profile = () => {
   const loggedInUserId = localStorage.getItem('user_id') || null;
   const token = localStorage.getItem('token');
 
-  // True if: (a) /profile (no :id) OR (b) :id equals logged-in user id
   const isCurrentUser =
     !id || (user && String(user.user_id) === String(loggedInUserId));
 
@@ -43,14 +43,13 @@ const Profile = () => {
         }
 
         const { data } = await axios.get(
-          `http://localhost:8288/api/users/${userIdToFetch}`,
+          `${API_BASE_URL}/users/${userIdToFetch}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
         setUser(data);
         setSelectedPicture(data.profile_picture || 'default.png');
 
-        // When viewing own profile, prefill form
         if (!id) {
           setFormData({
             username: data.username,
@@ -74,8 +73,10 @@ const Profile = () => {
     const fetchRecipes = async () => {
       if (!user) return;
       try {
-        const { data } = await axios.get('http://localhost:8288/api/recipes');
-        setRecipes(data.filter((r) => String(r.user_id) === String(user.user_id)));
+        const { data } = await axios.get(`${API_BASE_URL}/recipes`);
+        setRecipes(
+          data.filter((r) => String(r.user_id) === String(user.user_id))
+        );
       } catch (error) {
         console.error('Error fetching recipes:', error);
       }
@@ -110,9 +111,11 @@ const Profile = () => {
     }
 
     try {
-      await axios.put('http://localhost:8288/api/users/profile', updateData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.put(
+        `${API_BASE_URL}/users/profile`,
+        updateData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       setUser((prev) => ({
         ...prev,
@@ -143,9 +146,10 @@ const Profile = () => {
 
   const handleDeleteClick = async () => {
     try {
-      await axios.delete('http://localhost:8288/api/users/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `${API_BASE_URL}/users/profile`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       localStorage.clear();
       navigate('/login');
     } catch (error) {
@@ -197,7 +201,7 @@ const Profile = () => {
 
           <label>Select Profile Picture:</label>
           <img
-            src={`http://localhost:8288/uploads/${selectedPicture}`}
+            src={`${FILE_BASE_URL}/uploads/${selectedPicture}`}
             alt="Profile"
             className="profile-picture"
             onClick={openPictureModal}
@@ -214,7 +218,7 @@ const Profile = () => {
       ) : (
         <div className="profile-info">
           <img
-            src={`http://localhost:8288/uploads/${user.profile_picture || 'default.png'}`}
+            src={`${FILE_BASE_URL}/uploads/${user.profile_picture || 'default.png'}`}
             alt="Profile"
             className="profile-pic"
           />
@@ -242,7 +246,7 @@ const Profile = () => {
             >
               {recipe.image_filename && (
                 <img
-                  src={`http://localhost:8288/uploads/${recipe.image_filename}`}
+                  src={`${FILE_BASE_URL}/uploads/${recipe.image_filename}`}
                   alt={recipe.title}
                   className="recipe-image"
                 />
@@ -266,7 +270,7 @@ const Profile = () => {
             ].map((pic) => (
               <img
                 key={pic}
-                src={`http://localhost:8288/uploads/${pic}`}
+                src={`${FILE_BASE_URL}/uploads/${pic}`}
                 alt="Profile Option"
                 className={`picture-option ${selectedPicture === pic ? 'selected' : ''}`}
                 onClick={() => handlePictureSelect(pic)}

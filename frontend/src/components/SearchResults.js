@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import RecipeCard from '../components/RecipeCard';
 import './SearchResults.css';
+import { API_BASE_URL } from '../Configuration';
 
 const SearchResults = () => {
   const [results, setResults] = useState([]);
@@ -15,11 +16,16 @@ const SearchResults = () => {
 
       if (query) {
         try {
-          const response = await axios.get(`http://localhost:8288/api/recipes/search?query=${query}`);
+          const response = await axios.get(
+            `${API_BASE_URL}/recipes/search`,
+            { params: { query } }
+          );
           setResults(response.data);
         } catch (error) {
           console.error('Error fetching search results:', error);
         }
+      } else {
+        setResults([]);
       }
     };
 
@@ -27,11 +33,10 @@ const SearchResults = () => {
   }, [location.search]);
 
   return (
-    
     <div className="search-results">
       {results.length > 0 ? (
         <div className="search-results-container">
-          {results.map(recipe => (
+          {results.map((recipe) => (
             <RecipeCard key={recipe.recipe_id} recipe={recipe} />
           ))}
         </div>

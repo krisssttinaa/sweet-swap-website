@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { useNavigate, useParams } from 'react-router-dom'; // Import useParams to get category from URL if needed
+import { useNavigate, useParams } from 'react-router-dom';
 import RecipeCard from '../components/RecipeCard';
 import './RecipeList.css';
+import { API_BASE_URL } from '../Configuration';
 
 const RecipeList = () => {
-  const { category: categoryParam } = useParams(); // Get category from URL
+  const { category: categoryParam } = useParams();
   const [recipes, setRecipes] = useState([]);
-  const [selectedTab, setSelectedTab] = useState('all'); 
-  const [isLoggedIn, setIsLoggedIn] = useState(false); 
-  const [currentCategory, setCurrentCategory] = useState(categoryParam || 'all'); // Initialize with URL category or default to 'all'
+  const [selectedTab, setSelectedTab] = useState('all');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState(categoryParam || 'all');
 
   const navigate = useNavigate();
 
@@ -23,45 +24,60 @@ const RecipeList = () => {
   const fetchRecipes = useCallback(async () => {
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('user_id');
+    const userIdStr = userId ? String(userId) : null;
 
     try {
       let response;
+
       if (selectedTab === 'saved') {
-        response = await axios.get('http://localhost:8288/api/saved/saved', {
+        response = await axios.get(`${API_BASE_URL}/saved/saved`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+
         if (currentCategory !== 'all') {
           response = {
-            data: response.data.filter(recipe => recipe.category === currentCategory)
+            data: response.data.filter(
+              (recipe) => recipe.category === currentCategory
+            ),
           };
         }
       } else if (selectedTab === 'my') {
-        if (!userId) {
+        if (!userIdStr) {
           console.error('No user ID found. Cannot fetch user-specific recipes.');
+          setRecipes([]);
           return;
         }
-        response = await axios.get('http://localhost:8288/api/recipes', {
+
+        const all = await axios.get(`${API_BASE_URL}/recipes`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+
         response = {
-          data: response.data.filter(recipe => recipe.user_id === parseInt(userId) && (currentCategory === 'all' || recipe.category === currentCategory))
+          data: all.data.filter(
+            (recipe) =>
+              String(recipe.user_id) === userIdStr &&
+              (currentCategory === 'all' ||
+                recipe.category === currentCategory)
+          ),
         };
       } else {
         if (currentCategory === 'all') {
-          response = await axios.get('http://localhost:8288/api/recipes');
+          response = await axios.get(`${API_BASE_URL}/recipes`);
         } else {
-          response = await axios.get(`http://localhost:8288/api/recipes/category/${currentCategory}`);
+          response = await axios.get(
+            `${API_BASE_URL}/recipes/category/${currentCategory}`
+          );
         }
       }
 
       setRecipes(response.data);
     } catch (error) {
       console.error('Error fetching recipes:', error);
+      setRecipes([]);
     }
   }, [selectedTab, currentCategory]);
 
   useEffect(() => {
-    // Update the currentCategory state if the URL changes (when navigating from Home)
     if (categoryParam) {
       setCurrentCategory(categoryParam);
     }
@@ -87,13 +103,32 @@ const RecipeList = () => {
   return (
     <div className="recipe-list">
       <div className="tabs">
-        <button className={selectedTab === 'saved' ? 'active' : ''} onClick={() => setSelectedTab('saved')}>Saved Recipes</button>
-        <button className={selectedTab === 'all' ? 'active' : ''} onClick={() => setSelectedTab('all')}>All Recipes</button>
-        <button className={selectedTab === 'my' ? 'active' : ''} onClick={() => setSelectedTab('my')}>My Recipes</button>
+        <button
+          className={selectedTab === 'saved' ? 'active' : ''}
+          onClick={() => setSelectedTab('saved')}
+        >
+          Saved Recipes
+        </button>
+        <button
+          className={selectedTab === 'all' ? 'active' : ''}
+          onClick={() => setSelectedTab('all')}
+        >
+          All Recipes
+        </button>
+        <button
+          className={selectedTab === 'my' ? 'active' : ''}
+          onClick={() => setSelectedTab('my')}
+        >
+          My Recipes
+        </button>
       </div>
       <div className="recipe-header">
         <div className="recipe-actions">
-          <select className="category-select" value={currentCategory} onChange={(e) => handleCategorySelect(e.target.value)}>
+          <select
+            className="category-select"
+            value={currentCategory}
+            onChange={(e) => handleCategorySelect(e.target.value)}
+          >
             <option value="all">All</option>
             <option value="Salads">Salads</option>
             <option value="Vegetarian Dishes">Vegetarian Dishes</option>
@@ -105,7 +140,12 @@ const RecipeList = () => {
             <option value="Non-Vegetarian Food">Non-Vegetarian Food</option>
           </select>
           {isLoggedIn && (
-            <button className="add-recipe-button" onClick={handleAddRecipe}>+ Add Recipe</button>
+            <button
+              className="add-recipe-button"
+              onClick={handleAddRecipe}
+            >
+              + Add Recipe
+            </button>
           )}
         </div>
       </div>
@@ -113,7 +153,11 @@ const RecipeList = () => {
       <div className="recipes-container">
         {recipes.length > 0 ? (
           recipes.map((recipe) => (
-            <RecipeCard key={recipe.recipe_id} recipe={recipe} fetchRecipes={fetchRecipes} />
+            <RecipeCard
+              key={recipe.recipe_id}
+              recipe={recipe}
+              fetchRecipes={fetchRecipes}
+            />
           ))
         ) : (
           <p>No recipes found.</p>

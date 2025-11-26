@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import './EditRecipe.css';
+import { API_BASE_URL } from '../Configuration';
 
 const EditRecipe = () => {
   const { id } = useParams();
@@ -14,7 +15,7 @@ const EditRecipe = () => {
   useEffect(() => {
     const fetchRecipe = async () => {
       try {
-        const response = await axios.get(`http://localhost:8288/api/recipes/${id}`);
+        const response = await axios.get(`${API_BASE_URL}/recipes/${id}`);
         const recipe = response.data;
         setTitle(recipe.title);
         setInstructions(recipe.instructions);
@@ -30,22 +31,25 @@ const EditRecipe = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     const token = localStorage.getItem('token');
-  
+
     const formData = new FormData();
     formData.append('title', title);
     formData.append('instructions', instructions);
     formData.append('category', category);
-    if (image) formData.append('image', image); // Ensure this is correct
-  
+    if (image) formData.append('image', image);
+
     try {
-      await axios.put(`http://localhost:8288/api/recipes/${id}`, formData, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+      await axios.put(`${API_BASE_URL}/recipes/${id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
       });
       navigate(`/recipe/${id}`);
     } catch (error) {
       console.error('Error updating recipe:', error);
     }
-  }; 
+  };
 
   return (
     <div className="edit-recipe-container">
@@ -70,8 +74,12 @@ const EditRecipe = () => {
         <label>Image</label>
         <input type="file" onChange={(e) => setImage(e.target.files[0])} />
         <div className="button-group">
-          <button type="button" className="cancel-button" onClick={() => navigate(-1)}>Cancel</button>
-          <button type="submit" className="edit-recipe-button">Save Changes</button>
+          <button type="button" className="cancel-button" onClick={() => navigate(-1)}>
+            Cancel
+          </button>
+          <button type="submit" className="edit-recipe-button">
+            Save Changes
+          </button>
         </div>
       </form>
     </div>

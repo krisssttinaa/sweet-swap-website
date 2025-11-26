@@ -2,12 +2,13 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './RecipeDetails.css';
+import { API_BASE_URL, FILE_BASE_URL } from '../Configuration';
 
 const RecipeDetails = () => {
     const { id } = useParams();
     const [recipe, setRecipe] = useState(null);
     const [username, setUsername] = useState('');
-    const [userProfilePicture, setUserProfilePicture] = useState('default.png'); // Added state for author's profile picture
+    const [userProfilePicture, setUserProfilePicture] = useState('default.png');
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [editingCommentId, setEditingCommentId] = useState(null);
@@ -21,16 +22,21 @@ const RecipeDetails = () => {
 
     const fetchComments = useCallback(async () => {
         try {
-            const commentsResponse = await axios.get(`http://localhost:8288/api/comments/recipe/${id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const commentsResponse = await axios.get(
+                `${API_BASE_URL}/comments/recipe/${id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
             if (commentsResponse.data && Array.isArray(commentsResponse.data)) {
                 const commentsWithPictures = await Promise.all(
                     commentsResponse.data.map(async (comment) => {
-                        const userResponse = await axios.get(`http://localhost:8288/api/users/${comment.user_id}`);
+                        const userResponse = await axios.get(
+                            `${API_BASE_URL}/users/${comment.user_id}`
+                        );
                         return {
                             ...comment,
-                            profile_picture: userResponse.data.profile_picture || 'default.png',
+                            profile_picture:
+                                userResponse.data.profile_picture || 'default.png',
                         };
                     })
                 );
@@ -44,24 +50,32 @@ const RecipeDetails = () => {
     useEffect(() => {
         const fetchRecipe = async () => {
             try {
-                const response = await axios.get(`http://localhost:8288/api/recipes/${id}`);
+                const response = await axios.get(`${API_BASE_URL}/recipes/${id}`);
                 setRecipe(response.data);
 
                 if (response.data.user_id) {
-                    const userResponse = await axios.get(`http://localhost:8288/api/users/${response.data.user_id}`);
+                    const userResponse = await axios.get(
+                        `${API_BASE_URL}/users/${response.data.user_id}`
+                    );
                     setUsername(userResponse.data.username);
-                    setUserProfilePicture(userResponse.data.profile_picture || 'default.png'); // Set author's profile picture
+                    setUserProfilePicture(userResponse.data.profile_picture || 'default.png');
                 }
 
                 if (token) {
-                    const savedResponse = await axios.get(`http://localhost:8288/api/saved/saved`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
+                    const savedResponse = await axios.get(
+                        `${API_BASE_URL}/saved/saved`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
                     const savedRecipes = savedResponse.data;
-                    setIsSaved(savedRecipes.some(savedRecipe => savedRecipe.recipe_id === response.data.recipe_id));
+                    setIsSaved(
+                        savedRecipes.some(
+                            (savedRecipe) =>
+                                savedRecipe.recipe_id === response.data.recipe_id
+                        )
+                    );
                 }
 
-                fetchComments(); // Fetch comments when component loads
+                fetchComments();
             } catch (error) {
                 console.error('Error fetching recipe:', error);
             }
@@ -80,15 +94,19 @@ const RecipeDetails = () => {
         }
 
         try {
-            await axios.post(`http://localhost:8288/api/comments`, {
-                recipe_id: id,
-                user_id: userId,
-                content: newComment
-            }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await axios.post(
+                `${API_BASE_URL}/comments`,
+                {
+                    recipe_id: id,
+                    user_id: userId,
+                    content: newComment,
+                },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
 
-            fetchComments();  // Refetch comments after submission
+            fetchComments();
             setNewComment('');
         } catch (error) {
             console.error('Error submitting comment:', error);
@@ -106,12 +124,13 @@ const RecipeDetails = () => {
         }
 
         try {
-            await axios.put(`http://localhost:8288/api/comments/${editingCommentId}`, 
-            { content: editContent }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await axios.put(
+                `${API_BASE_URL}/comments/${editingCommentId}`,
+                { content: editContent },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
-            fetchComments();  // Refetch comments after update
+            fetchComments();
             setEditingCommentId(null);
             setEditContent('');
         } catch (error) {
@@ -121,10 +140,11 @@ const RecipeDetails = () => {
 
     const handleDeleteComment = async (comment_id) => {
         try {
-            await axios.delete(`http://localhost:8288/api/comments/${comment_id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            fetchComments();  // Refetch comments after delete
+            await axios.delete(
+                `${API_BASE_URL}/comments/${comment_id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            fetchComments();
         } catch (error) {
             console.error('Error deleting comment:', error);
         }
@@ -158,9 +178,10 @@ const RecipeDetails = () => {
 
     const handleDelete = async () => {
         try {
-            await axios.delete(`http://localhost:8288/api/recipes/${recipe.recipe_id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await axios.delete(
+                `${API_BASE_URL}/recipes/${recipe.recipe_id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
             navigate('/recipes');
         } catch (error) {
             console.error('Error deleting recipe:', error);
@@ -169,9 +190,11 @@ const RecipeDetails = () => {
 
     const handleSave = async () => {
         try {
-            await axios.post('http://localhost:8288/api/saved/save', { recipeId: recipe.recipe_id }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await axios.post(
+                `${API_BASE_URL}/saved/save`,
+                { recipeId: recipe.recipe_id },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
             setIsSaved(true);
         } catch (error) {
             console.error('Error saving recipe:', error);
@@ -180,10 +203,13 @@ const RecipeDetails = () => {
 
     const handleUnsave = async () => {
         try {
-            await axios.delete('http://localhost:8288/api/saved/unsave', {
-                data: { recipeId: recipe.recipe_id },
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await axios.delete(
+                `${API_BASE_URL}/saved/unsave`,
+                {
+                    data: { recipeId: recipe.recipe_id },
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
             setIsSaved(false);
         } catch (error) {
             console.error('Error unsaving recipe:', error);
@@ -195,7 +221,10 @@ const RecipeDetails = () => {
     };
 
     const handleUsernameClick = (commentUserId) => {
-        const profilePath = userId === commentUserId.toString() ? '/profile' : `/user/${commentUserId}`;
+        const profilePath =
+            userId === commentUserId.toString()
+                ? '/profile'
+                : `/user/${commentUserId}`;
         navigate(profilePath);
     };
 
@@ -205,12 +234,25 @@ const RecipeDetails = () => {
 
     return (
         <div className="recipe-details">
-            <img className='recipe-img' src={`http://localhost:8288/uploads/${recipe.image_filename}`} alt={recipe.title} />
+            <img
+                className="recipe-img"
+                src={`${FILE_BASE_URL}/uploads/${recipe.image_filename}`}
+                alt={recipe.title}
+            />
             <div className="recipe-info">
                 <h2>{recipe.title}</h2>
                 <p className="author">
-                    <img src={`http://localhost:8288/uploads/${userProfilePicture}`} alt="Profile" className="profile-picture" />
-                    <span onClick={() => handleUsernameClick(recipe.user_id)} className="username">{username}</span>
+                    <img
+                        src={`${FILE_BASE_URL}/uploads/${userProfilePicture}`}
+                        alt="Profile"
+                        className="profile-picture"
+                    />
+                    <span
+                        onClick={() => handleUsernameClick(recipe.user_id)}
+                        className="username"
+                    >
+                        {username}
+                    </span>
                 </p>
                 {recipe.products && recipe.products.length > 0 && (
                     <>
@@ -222,7 +264,8 @@ const RecipeDetails = () => {
                                     <br />
                                     <em>{product.description}</em>
                                     <br />
-                                    Price: {product.price}, Brand: {product.brand}, Shop: {product.shop}
+                                    Price: {product.price}, Brand: {product.brand}, Shop:{' '}
+                                    {product.shop}
                                 </li>
                             ))}
                         </ul>
@@ -233,58 +276,93 @@ const RecipeDetails = () => {
                 <p className="instructions-txt">{recipe.instructions}</p>
 
                 <h3>Comments</h3>
-                              <div className="comments-section">
-                  {comments.length > 0 ? (
-                      comments.map((comment, index) => (
-                          <div key={comment.comment_id || index} className="comment">
-                              <img src={`http://localhost:8288/uploads/${comment.profile_picture}`} alt={comment.username} className="profile-picture" />
-                              {editingCommentId === comment.comment_id ? (
-                                  <div>
-                                      <textarea
-                                          value={editContent}
-                                          onChange={(e) => setEditContent(e.target.value)}
-                                      />
-                                      <button onClick={handleUpdateComment}>Update</button>
-                                      <button onClick={() => setEditingCommentId(null)}>Cancel</button>
-                                  </div>
-                              ) : (
-                                  <>
-                                      <p>
-                                          <span 
-                                              onClick={() => handleUsernameClick(comment.user_id)} 
-                                              className="username clickable-username"
-                                          >
-                                              {comment.username}
-                                          </span>: {comment.content}
-                                      </p>
-                                      <div className='comments-details'>
-                                          <small>
-                                              Commented on: {comment.date_commented ? new Date(comment.date_commented).toLocaleString() : 'Date not available'}
-                                          </small>
-                                          {comment.user_id === parseInt(userId) && (
-                                              <div className='comments-buttons-change'>
-                                                  <button onClick={() => handleEditComment(comment.comment_id, comment.content)}>Edit</button>
-                                                  <button onClick={() => handleDeleteComment(comment.comment_id)}>Delete</button>
-                                              </div>
-                                          )}
-                                      </div>
-                                  </>
-                              )}
-                          </div>
-                      ))
-                  ) : (
-                      <p>No comments yet.</p>
-                  )}
-                  <div className="add-comment">
-                      <textarea
-                          value={newComment}
-                          onChange={handleNewCommentChange}
-                          placeholder="Add a comment..."
-                          rows="3"
-                      />
-                      <button onClick={handleCommentSubmit}>Submit</button>
-                  </div>
-              </div>
+                <div className="comments-section">
+                    {comments.length > 0 ? (
+                        comments.map((comment, index) => (
+                            <div key={comment.comment_id || index} className="comment">
+                                <img
+                                    src={`${FILE_BASE_URL}/uploads/${comment.profile_picture}`}
+                                    alt={comment.username}
+                                    className="profile-picture"
+                                />
+                                {editingCommentId === comment.comment_id ? (
+                                    <div>
+                                        <textarea
+                                            value={editContent}
+                                            onChange={(e) =>
+                                                setEditContent(e.target.value)
+                                            }
+                                        />
+                                        <button onClick={handleUpdateComment}>Update</button>
+                                        <button
+                                            onClick={() => setEditingCommentId(null)}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p>
+                                            <span
+                                                onClick={() =>
+                                                    handleUsernameClick(comment.user_id)
+                                                }
+                                                className="username clickable-username"
+                                            >
+                                                {comment.username}
+                                            </span>
+                                            : {comment.content}
+                                        </p>
+                                        <div className="comments-details">
+                                            <small>
+                                                Commented on:{' '}
+                                                {comment.date_commented
+                                                    ? new Date(
+                                                          comment.date_commented
+                                                      ).toLocaleString()
+                                                    : 'Date not available'}
+                                            </small>
+                                            {comment.user_id === parseInt(userId) && (
+                                                <div className="comments-buttons-change">
+                                                    <button
+                                                        onClick={() =>
+                                                            handleEditComment(
+                                                                comment.comment_id,
+                                                                comment.content
+                                                            )
+                                                        }
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDeleteComment(
+                                                                comment.comment_id
+                                                            )
+                                                        }
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ))
+                    ) : (
+                        <p>No comments yet.</p>
+                    )}
+                    <div className="add-comment">
+                        <textarea
+                            value={newComment}
+                            onChange={handleNewCommentChange}
+                            placeholder="Add a comment..."
+                            rows="3"
+                        />
+                        <button onClick={handleCommentSubmit}>Submit</button>
+                    </div>
+                </div>
             </div>
             {userId && token && (
                 <div className="menu" onClick={toggleMenu} ref={menuRef}>
@@ -295,12 +373,17 @@ const RecipeDetails = () => {
                     </div>
                     {menuOpen && (
                         <div className="menu-options">
-                            {userId === recipe.user_id.toString() && <div onClick={handleEdit}>Edit</div>}
-                            {userId === recipe.user_id.toString() && <div onClick={handleDelete}>Delete</div>}
-                            {isSaved
-                                ? <div onClick={handleUnsave}>Unsave</div>
-                                : <div onClick={handleSave}>Save</div>
-                            }
+                            {userId === recipe.user_id.toString() && (
+                                <div onClick={handleEdit}>Edit</div>
+                            )}
+                            {userId === recipe.user_id.toString() && (
+                                <div onClick={handleDelete}>Delete</div>
+                            )}
+                            {isSaved ? (
+                                <div onClick={handleUnsave}>Unsave</div>
+                            ) : (
+                                <div onClick={handleSave}>Save</div>
+                            )}
                             <div onClick={handleReport}>Report</div>
                         </div>
                     )}

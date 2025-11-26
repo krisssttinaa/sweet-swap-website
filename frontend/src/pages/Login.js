@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
+import { API_BASE_URL } from '../Configuration';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -14,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     setError('');
     try {
-      const { data } = await axios.post('http://localhost:8288/api/users/login', {
+      const { data } = await axios.post(`${API_BASE_URL}/users/login`, {
         username,
         password
       });
@@ -22,9 +23,9 @@ const Login = () => {
       const { token, user } = data || {};
       if (token && user && user.id != null) {
         localStorage.setItem('token', token);
-        localStorage.setItem('user_id', String(user.id));   // <-- important
+        localStorage.setItem('user_id', String(user.id));
         localStorage.setItem('username', user.username);
-        navigate('/profile');                                // <-- go to “my profile”
+        navigate('/profile');
       } else {
         setError('Invalid credentials');
       }
@@ -42,22 +43,41 @@ const Login = () => {
           {error && <p className="error-message">{error}</p>}
           <div className="form-group">
             <label htmlFor="username">Username:</label>
-            <input id="username" value={username}
-              onChange={(e) => setUsername(e.target.value)} required />
+            <input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
           </div>
           <div className="form-group">
             <label htmlFor="password">Password:</label>
-            <input id="password" type={showPassword ? 'text' : 'password'}
-              value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
           </div>
           <div className="form-group show-password">
-            <input id="showPassword" type="checkbox"
-              checked={showPassword} onChange={() => setShowPassword(!showPassword)} />
+            <input
+              id="showPassword"
+              type="checkbox"
+              checked={showPassword}
+              onChange={() => setShowPassword(!showPassword)}
+            />
             <label htmlFor="showPassword">Show password</label>
           </div>
-          <button type="submit" className="login-button">Login</button>
+          <button type="submit" className="login-button">
+            Login
+          </button>
         </form>
-        <button type="button" className="register-link" onClick={() => navigate('/register')}>
+        <button
+          type="button"
+          className="register-link"
+          onClick={() => navigate('/register')}
+        >
           or Register
         </button>
       </div>

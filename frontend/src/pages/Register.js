@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './Register.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../Configuration';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -10,24 +11,24 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [country, setCountry] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // State for show password
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:8288/api/users/register', {
+      const response = await axios.post(`${API_BASE_URL}/users/register`, {
         username,
         name,
         surname,
         email,
         password,
         country,
-        role: 'user'
+        role: 'user',
       });
-      navigate('/login');
+
       console.log(response.data);
-      
+      navigate('/login');
     } catch (error) {
       if (error.response) {
         console.error('Registration error:', error.response.data);
@@ -113,7 +114,9 @@ const Register = () => {
               required
             />
           </div>
-          <button type="submit" className="register-button">Register</button>
+          <button type="submit" className="register-button">
+            Register
+          </button>
         </form>
         <button
           className="login-link-button"
