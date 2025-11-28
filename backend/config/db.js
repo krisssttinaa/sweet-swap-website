@@ -1,17 +1,32 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || 26257),
-  user: process.env.DB_USER || 'root',
-  database: process.env.DB_NAME || 'sweet_swap',
-  password: process.env.DB_PASSWORD || undefined,
-  ssl: (String(process.env.DB_SSL || '').toLowerCase() === 'true')
-    ? { rejectUnauthorized: false }
-    : false,
-  application_name: 'sweet-swap-backend'
-});
+// Prefer DATABASE_URL (for CockroachDB Cloud / Render)
+const connectionString = process.env.DATABASE_URL;
+
+let pool;
+
+if (connectionString) {
+  pool = new Pool({
+    connectionString,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    application_name: 'sweet-swap-backend'
+  });
+} else {
+  pool = new Pool({
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || 26257),
+    user: process.env.DB_USER || 'root',
+    database: process.env.DB_NAME || 'sweet_swap',
+    password: process.env.DB_PASSWORD || undefined,
+    ssl: String(process.env.DB_SSL || '').toLowerCase() === 'true'
+      ? { rejectUnauthorized: false }
+      : false,
+    application_name: 'sweet-swap-backend'
+  });
+}
 
 function toPg(sql, params = []) {
   let i = 0;
@@ -26,7 +41,8 @@ module.exports = {
   query: async (sql, params = []) => {
     const { sql: pgSql, params: pgParams } = toPg(sql, params);
     const res = await pool.query(pgSql, pgParams);
-    return [res.rows]; // <— important: array with rows
+    // Keep the same return shape you used before
+    return [res.rows];
   },
   getClient: () => pool.connect()
 };
