@@ -12,7 +12,6 @@ console.log('DB_USER:', process.env.DB_USER);
 console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
 console.log('DB_NAME:', process.env.DB_NAME);
 
-
 const userRoutes = require('./routes/userRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
 const contactRoutes = require('./routes/contactRoutes');
@@ -22,29 +21,19 @@ const commentRoutes = require('./routes/commentRoutes');
 app.use(cors());
 app.use(express.json());
 
+// API routes
 app.use('/api/comments', commentRoutes);
 app.use('/api/saved', savedRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', contactRoutes);
+
+// Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, 'build')));
-
-app.get("/", (req, res) => { // Serve the React app's index.html on root route
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
-// This middleware handles any other routes and sends them to the React app
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
-app._router.stack.forEach(function (r) { // Debugging Route Paths
-    if (r.route && r.route.path) {
-        console.log(r.route.path);
-    }
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not found' });
 });
 
 app.listen(port, () => {
