@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-// You can keep this for local dev; on Render, env vars are already set.
 require('dotenv').config();
 
 console.log("========================================");
@@ -23,7 +22,6 @@ const pool = new Pool({
   application_name: 'sweet-swap-backend'
 });
 
-// Test DB connection on startup
 (async () => {
   try {
     console.log("Testing database connection...");
@@ -35,7 +33,6 @@ const pool = new Pool({
   }
 })();
 
-// Convert "?" placeholders to $1, $2, ...
 function toPg(sql, params = []) {
   let i = 0;
   const outSql = sql.replace(/\?/g, () => {
