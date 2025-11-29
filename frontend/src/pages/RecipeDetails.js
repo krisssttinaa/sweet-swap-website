@@ -322,29 +322,24 @@ const RecipeDetails = () => {
                                                       ).toLocaleString()
                                                     : 'Date not available'}
                                             </small>
-                                            {comment.user_id === parseInt(userId) && (
-                                                <div className="comments-buttons-change">
+                                            {userId &&
+                                                comment.user_id &&
+                                                String(comment.user_id) === String(userId) && (
+                                                    <div className="comments-buttons-change">
                                                     <button
                                                         onClick={() =>
-                                                            handleEditComment(
-                                                                comment.comment_id,
-                                                                comment.content
-                                                            )
+                                                        handleEditComment(comment.comment_id, comment.content)
                                                         }
                                                     >
                                                         Edit
                                                     </button>
                                                     <button
-                                                        onClick={() =>
-                                                            handleDeleteComment(
-                                                                comment.comment_id
-                                                            )
-                                                        }
+                                                        onClick={() => handleDeleteComment(comment.comment_id)}
                                                     >
                                                         Delete
                                                     </button>
-                                                </div>
-                                            )}
+                                                    </div>
+                                                )}
                                         </div>
                                     </>
                                 )}
